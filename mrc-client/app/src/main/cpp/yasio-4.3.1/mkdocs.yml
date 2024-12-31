@@ -1,0 +1,140 @@
+docs_dir: docs
+site_name: yasio
+repo_url: https://github.com/yasio/yasio
+repo_name: yasio/yasio
+edit_uri: edit/dev/docs
+copyright: Copyright &copy; 2012-present HALX99.
+theme:
+  name: material
+  language: zh
+  logo: assets/images/logo.png
+  favicon: assets/images/logo.png
+  features:
+    - content.action.edit
+    - content.action.view
+    - content.code.copy
+    - navigation.footer
+  icon:
+    edit: material/pencil 
+    view: material/eye
+    repo: fontawesome/brands/github
+  palette:
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+nav:
+  - 主页: index.md
+  - API 参考:
+    - io_service类: api/reference/io_service-class.md
+    - io_channel类: api/reference/io_channel-class.md
+    - io_event类: api/reference/io_event-class.md
+    - obstream类: api/reference/obstream-class.md
+    - ibstream类: api/reference/ibstream-class.md
+    - xxsocket类: api/reference/xxsocket-class.md
+    - endpoint类: api/reference/endpoint-class.md
+    - object_pool类: api/reference/object_pool-class.md
+    - singleton类: api/reference/singleton-class.md
+    - io_service选项: api/reference/io_service-options.md
+    - 其他常用API: api/reference/others.md
+  - 预处理器: preprocessor.md
+  - 粘包处理: unpacking.md
+  - Interop: interop.md
+  - 常见问题: faq.md
+
+# Extensions
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - toc:
+      permalink: true
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.magiclink:
+      repo_url_shorthand: true
+      user: yasio
+      repo: yasio
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+plugins:
+  - search:
+      separator: '[\s\-,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
+  - pdf-export:
+      verbose: false
+      media_type: print
+      combined: true
+      combined_output_path: pdf/yasio-latest.pdf
+      enabled_if_env: DOCS_CI
+  - minify:
+      minify_html: true
+  - git-revision-date-localized:
+      enable_creation_date: true
+extra_css:
+  - 'assets/stylesheets/extra.css'
+extra:
+  analytics:
+    provider: google
+    property: G-DHR2DGTKEB
+    feedback:
+      title: Was this page helpful?
+      ratings:
+        - icon: material/emoticon-happy-outline
+          name: This page was helpful
+          data: 1
+          note: >-
+            Thanks for your feedback!
+        - icon: material/emoticon-sad-outline
+          name: This page could be improved
+          data: 0
+          note: >- 
+            Thanks for your feedback! Help us improve this page by
+            using our <a href="..." target="_blank" rel="noopener">feedback form</a>.
+
+  alternate:
+    # Switch to Chinese Simplfied
+    - name: 简体中文
+      link: https://yasio.github.io/yasio/
+      lang: zh
+
+    # Switch to English
+    - name: English
+      link: https://yasio.github.io/en/
+      lang: en
+  version:
+    provider: mike

@@ -1,0 +1,17 @@
+image:
+  - Visual Studio 2013
+
+version: 4.2.{build}
+
+environment:
+    global:
+      BUILD_TYPE: Release
+    matrix:
+      - BUILD_ARCH: x86
+      - BUILD_ARCH: x64
+
+install:
+  - git submodule update --init --recursive
+
+build_script:
+  - ps: .\build.ps1 -p win32 -a $env:BUILD_ARCH -cc msvc-120 -xc '-DYASIO_SSL_BACKEND=2'

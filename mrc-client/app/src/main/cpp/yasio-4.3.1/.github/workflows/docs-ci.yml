@@ -1,0 +1,54 @@
+name: docs
+
+on:
+  push:
+    branches: dev
+  pull_request:
+  workflow_dispatch:
+    # Inputs the workflow accepts.
+    inputs:
+      versions:
+        description: 'Please specific active versions'
+        # Default value if no value is explicitly provided
+        default: '3.39.12:3.39.x'
+        # Input has to be provided for the workflow to run
+        required: true
+env:
+  DOCS_CI: 1
+  PYTHON_VERSION: 3.x
+
+jobs:
+  documentation:
+    name: Build docs
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python runtime
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Python dependencies
+        run: |
+          pip install -r docs/requirements.txt
+      - name: Install missing fonts
+        run: |
+          wget https://github.com/simdsoft/fontlist/releases/download/v1.0/fontlist.zip
+          unzip fontlist.zip
+          mkdir -p ~/.fonts/
+          cp fontlist/* ~/.fonts/
+      - name: Configure commiter
+        run: |
+          git config user.name "docs-bot"
+          git config user.email "docs-bot@users.noreply.github.com"
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
+          git fetch
+      - name: Build docs & deploy
+        env:
+          ACTIVE_VERSIONS: ${{ github.event.inputs.versions }}
+        shell: pwsh
+        run: ./tools/docs.ps1 "$env:ACTIVE_VERSIONS"
+      
