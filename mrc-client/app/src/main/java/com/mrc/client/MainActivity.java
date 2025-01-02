@@ -58,9 +58,6 @@ public class MainActivity extends AppCompatActivity {
     String serverIpAddress;
     int serverPort;
 
-    private MyAccessibilityService myAccessibilityService;
-
-
     ConnectionStatus curStatus = ConnectionStatus.DISCONNECTED;
 
     @Override
@@ -73,8 +70,6 @@ public class MainActivity extends AppCompatActivity {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
-
-        myAccessibilityService = new MyAccessibilityService();
 
         editTextServerAddress = findViewById(R.id.editTextServerAddress);
         buttonConnect = findViewById(R.id.buttonConnect);
