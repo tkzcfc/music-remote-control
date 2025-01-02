@@ -117,9 +117,11 @@ public class MainActivity extends AppCompatActivity {
                             PushMediaKeyEvent keyEvent = gson.fromJson(message.data, PushMediaKeyEvent.class);
 
                             // https://stackoverflow.com/questions/18800198/control-the-default-music-player-of-android-or-any-other-music-player#comment137646196_53961746
-                            AudioManager mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-                            KeyEvent event = new KeyEvent(keyEvent.action, keyEvent.code);
-                            mAudioManager.dispatchMediaKeyEvent(event);
+                            AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+                            if (audioManager != null) {
+                                audioManager.dispatchMediaKeyEvent(new KeyEvent(keyEvent.action, keyEvent.code));
+                                //audioManager.dispatchMediaKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_NEXT));
+                            }
                             break;
                     }
                 }
