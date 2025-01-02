@@ -15,22 +15,32 @@ JNI_OnLoad(JavaVM* vm, void* reserved) {
     return JNI_VERSION_1_6;
 }
 
+
 extern "C"
 JNIEXPORT jint JNICALL
+Java_com_mrc_client_TcpClient_nextConnectionId(JNIEnv *env, jobject thiz) {
+    jclass cls = env->GetObjectClass(thiz);
+    jfieldID fid = env->GetFieldID(cls, "nativeHandle", "J");
+    auto client = reinterpret_cast<yasio_client*>(env->GetLongField(thiz, fid));
+    if(client) {
+        return  client->nextConnectionId();
+    }
+    return -1;
+}
+
+extern "C"
+JNIEXPORT void JNICALL
 Java_com_mrc_client_TcpClient_connect(JNIEnv *env, jobject thiz, jstring host, jint port,
                                       jint kind) {
     jclass cls = env->GetObjectClass(thiz);
     jfieldID fid = env->GetFieldID(cls, "nativeHandle", "J");
     auto client = reinterpret_cast<yasio_client*>(env->GetLongField(thiz, fid));
 
-    int result = -1;
-    const char *nativeHost = env->GetStringUTFChars(host, 0);
     if(client) {
-        result = client->connect(nativeHost, port, kind);
+        const char *nativeHost = env->GetStringUTFChars(host, 0);
+        client->connect(nativeHost, port, kind);
+        env->ReleaseStringUTFChars(host, nativeHost);
     }
-    env->ReleaseStringUTFChars(host, nativeHost);
-
-    return result;
 }
 
 extern "C"
@@ -145,9 +155,13 @@ Java_com_mrc_client_TcpClient_start(JNIEnv *env, jobject thiz, jint max_channel_
     env->SetLongField(thiz, fid, reinterpret_cast<jlong>(client));
 
     jobject globalObj = env->NewGlobalRef(thiz);
-    std::thread([=](){
+    std::thread([globalObj, client, max_channel_count](){
         start_client(client, globalObj, max_channel_count);
+
+        JNIEnv* env = nullptr;
+        jvm->AttachCurrentThread(&env, nullptr);
         env->DeleteGlobalRef(globalObj);
+        jvm->DetachCurrentThread();
         delete client;
     }).detach();
 }

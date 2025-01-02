@@ -1,9 +1,14 @@
 package com.mrc.client;
 
 import androidx.annotation.Nullable;
-import androidx.core.view.OnApplyWindowInsetsListener;
 
 public class TcpClient {
+    public static final int EVENT_ON_CONNECT_SUCCESS = 0;
+    public static final int EVENT_ON_CONNECT_FAILED = 1;
+    public static final int EVENT_ON_DISCONNECT = 2;
+    public static final int EVENT_ON_RECV_DATA = 3;
+
+
     // 用于保存C++对象指针
     private long nativeHandle;
 
@@ -13,8 +18,9 @@ public class TcpClient {
 
     public native void stop();
 
-    // 小于0表示出错，其他返回值表示新的连接id
-    public native int connect(String host, int port, int kind);
+    public native int nextConnectionId();
+
+    public native void connect(String host, int port, int kind);
 
     public native void disconnect(int connection_id);
 

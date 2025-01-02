@@ -3,6 +3,7 @@
 #include "yasio/yasio.hpp"
 #include "yasio/obstream.hpp"
 #include <unordered_map>
+#include <atomic>
 
 typedef std::function<void(int, int, const std::string_view&)> yasio_client_event_callback_type;
 typedef std::function<void(yasio::io_service*, int)> yasio_client_service_opt_callback_type;
@@ -31,8 +32,9 @@ public:
 
     void stop();
 
-    // 小于0表示出错，其他返回值表示新的连接id
-    int connect(const std::string& host, int port, int kind);
+    int nextConnectionId();
+
+    void connect(const std::string& host, int port, int kind);
 
     void disconnect(int connectionId);
 
@@ -80,13 +82,16 @@ private:
         yasio::transport_handle_t transport;
         ConnectionStatus status;
     };
-    int m_connectionIdSeed;
+    std::atomic_int m_connectionIdSeed;
     // 等待连接队列
     std::vector<Connection> m_connectQue;
-    // 已连接列表
-    std::unordered_map<int, Connection> m_aliveConnects;
     // 有效信道列表
     std::queue<int> m_availChannelQueue;
+    std::mutex m_queLock;
+
+    // 已连接列表
+    std::unordered_map<int, Connection> m_aliveConnects;
+    std::mutex m_connectListLock;
 
     yasio_client_event_callback_type m_eventCallback;
 };

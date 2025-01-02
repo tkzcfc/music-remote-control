@@ -4,7 +4,8 @@
 #define NET_LOG_ENABLED 0
 
 #if NET_LOG_ENABLED
-#define NET_LOG(format, ...) ax::log(format, ##__VA_ARGS__)
+#define LOG_TAG "yasio_client"
+#define NET_LOG(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 #else
 #define NET_LOG(...) \
         do             \
@@ -68,22 +69,34 @@ void yasio_client::stop()
     }
 }
 
-int yasio_client::connect(const std::string& host, int port, int kind)
+int yasio_client::nextConnectionId()
 {
+    return m_connectionIdSeed + 1;
+}
+
+void yasio_client::connect(const std::string& host, int port, int kind)
+{
+    auto id = m_connectionIdSeed + 1;
+    m_connectionIdSeed = id;
     Connection conn;
-    conn.id = m_connectionIdSeed++;
+    conn.id = id;
     conn.status = ConnectionStatus::Queuing;
     conn.port = port;
     conn.host = host;
     conn.kind = kind;
     conn.channel = -1;
     conn.transport = nullptr;
+
+    m_queLock.lock();
     m_connectQue.push_back(conn);
-    return conn.id;
+    m_queLock.unlock();
+
+    doConnect();
 }
 
 void yasio_client::disconnect(int connectionId)
 {
+    std::lock_guard<std::mutex> _lockguard1(m_connectListLock);
     auto it = m_aliveConnects.find(connectionId);
     if (it != m_aliveConnects.end())
     {
@@ -91,6 +104,7 @@ void yasio_client::disconnect(int connectionId)
         return;
     }
 
+    std::lock_guard<std::mutex> _lockguard2(m_queLock);
     for (auto it = m_connectQue.begin(); it != m_connectQue.end(); ++it)
     {
         if (it->id == connectionId)
@@ -103,9 +117,12 @@ void yasio_client::disconnect(int connectionId)
 
 int yasio_client::send(int connectionId, const char* data, size_t length)
 {
+    std::lock_guard<std::mutex> _lockguard(m_connectListLock);
+
     auto it = m_aliveConnects.find(connectionId);
-    if (it == m_aliveConnects.end())
+    if (it == m_aliveConnects.end()) {
         return -1000;
+    }
 
     auto& transport = it->second.transport;
     if (!transport)
@@ -131,10 +148,13 @@ void yasio_client::handleNetworkEvent(yasio::io_event* event)
         {
             if (event->status() == 0)
             {
-                auto it = m_aliveConnects.find(connectionId);
-                if (it != m_aliveConnects.end())
                 {
-                    it->second.transport = event->transport();
+                    std::lock_guard<std::mutex> _lockguard(m_connectListLock);
+                    auto it = m_aliveConnects.find(connectionId);
+                    if (it != m_aliveConnects.end())
+                    {
+                        it->second.transport = event->transport();
+                    }
                 }
                 NET_LOG("net: connect success, id = %d", connectionId);
                 dispatchEvent(event_type::OnConnectSuccess, connectionId, 0, 0);
@@ -173,6 +193,9 @@ void yasio_client::handleNetworkEvent(yasio::io_event* event)
 
 void yasio_client::handleNetworkEOF(yasio::io_channel* channel, int internalErrorCode)
 {
+    std::lock_guard<std::mutex> _lockguard1(m_connectListLock);
+    std::lock_guard<std::mutex> _lockguard2(m_queLock);
+
     int connectionId = channel->ud_.ival;
     channel->ud_.ival = -1;
 
@@ -187,14 +210,30 @@ void yasio_client::handleNetworkEOF(yasio::io_channel* channel, int internalErro
 
 void yasio_client::doConnect()
 {
-    while (!m_connectQue.empty())
-    {
+    while (true) {
+        m_queLock.lock();
+        if(m_connectQue.empty()) {
+            m_queLock.unlock();
+            break;
+        }
+
         auto& conn = m_connectQue.front();
         auto channel = tryTakeAvailChannel();
-        if (channel < 0)
+        if (channel < 0) {
+            m_queLock.unlock();
             break;
+        }
 
         conn.channel = channel;
+        m_connectQue.erase(m_connectQue.begin());
+        m_queLock.unlock();
+
+        {
+            m_connectListLock.lock();
+            m_aliveConnects.insert(std::make_pair(conn.id, conn));
+            m_connectListLock.unlock();
+        }
+
 
         auto channelHandle = m_service->channel_at(channel);
         NET_LOG("net: open connection for %s:%d, id = %d", conn.host.data(), conn.port, conn.id);
@@ -202,9 +241,6 @@ void yasio_client::doConnect()
 
         m_service->set_option(yasio::YOPT_C_REMOTE_ENDPOINT, channel, conn.host.data(), conn.port);
         m_service->open(channel, conn.kind);
-
-        m_aliveConnects.insert(std::make_pair(conn.id, m_connectQue[0]));
-        m_connectQue.erase(m_connectQue.begin());
     }
 }
 
