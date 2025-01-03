@@ -2,11 +2,8 @@ package com.mrc.client;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.content.Intent;
 import android.media.AudioManager;
-import android.os.Build;
 import android.os.Bundle;
-import android.os.SystemClock;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
@@ -27,13 +24,17 @@ import com.mrc.client.proto.Ping;
 import com.mrc.client.proto.Pong;
 import com.mrc.client.proto.PushMediaKeyEvent;
 
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
-enum ConnectionStatus {
-    CONNECTING,
-    CONNECTED,
-    DISCONNECTING,
-    DISCONNECTED,
+class ConnectionStatus {
+    public final static int CONNECTING = 0;
+    public final static int CONNECTED = 1;
+    public final static int DISCONNECTING = 2;
+    public final static int DISCONNECTED = 3;
 }
 
 public class MainActivity extends AppCompatActivity {
@@ -45,20 +46,24 @@ public class MainActivity extends AppCompatActivity {
 
     TcpClient client = new TcpClient();
 
-    EditText editTextServerAddress;
     TextView textViewStatus;
+    EditText editTextToken;
+    EditText editTextServerAddress;
     Button buttonConnect;
     Button buttonDisconnect;
 
     // 是否处于前台
-    boolean isForeground = true;
+    AtomicBoolean isForeground = new AtomicBoolean(true);
     // 连接id
-    int connectionId = -1;
+    AtomicInteger connectionId = new AtomicInteger(-1);
 
+    // 服务器地址
     String serverIpAddress;
     int serverPort;
+    // token
+    String token;
 
-    ConnectionStatus curStatus = ConnectionStatus.DISCONNECTED;
+    AtomicInteger curStatus = new AtomicInteger(ConnectionStatus.DISCONNECTED);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,19 +76,19 @@ public class MainActivity extends AppCompatActivity {
             return insets;
         });
 
+        textViewStatus = findViewById(R.id.textViewStatus);
+        editTextToken = findViewById(R.id.editTextToken);
         editTextServerAddress = findViewById(R.id.editTextServerAddress);
         buttonConnect = findViewById(R.id.buttonConnect);
         buttonDisconnect = findViewById(R.id.buttonDisconnect);
 
-        textViewStatus = findViewById(R.id.textViewStatus);
-
         client.setMessageReceivedListener((event_type, connection_id, data) -> {
-            if (connectionId != connection_id){
+            if (connectionId.get() != connection_id){
                 return;
             }
 
             // 自动重连
-            if(!isForeground) {
+            if(!isForeground.get()) {
                 if (event_type == TcpClient.EVENT_ON_DISCONNECT || event_type == TcpClient.EVENT_ON_CONNECT_FAILED) {
                     changeStatus(ConnectionStatus.CONNECTING);
                     try {
@@ -91,7 +96,7 @@ public class MainActivity extends AppCompatActivity {
                     } catch (InterruptedException ignored) {
                     }
 
-                    connectionId = client.nextConnectionId();
+                    connectionId.set(client.nextConnectionId());
                     client.connect(serverIpAddress, serverPort, 5);
                     return;
                 }
@@ -115,12 +120,13 @@ public class MainActivity extends AppCompatActivity {
                             break;
                         case "PushMediaKeyEvent":
                             PushMediaKeyEvent keyEvent = gson.fromJson(message.data, PushMediaKeyEvent.class);
-
-                            // https://stackoverflow.com/questions/18800198/control-the-default-music-player-of-android-or-any-other-music-player#comment137646196_53961746
-                            AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-                            if (audioManager != null) {
-                                audioManager.dispatchMediaKeyEvent(new KeyEvent(keyEvent.action, keyEvent.code));
-                                //audioManager.dispatchMediaKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_NEXT));
+                            if (token.equals(keyEvent.token)) {
+                                // https://stackoverflow.com/questions/18800198/control-the-default-music-player-of-android-or-any-other-music-player#comment137646196_53961746
+                                AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+                                if (audioManager != null) {
+                                    audioManager.dispatchMediaKeyEvent(new KeyEvent(keyEvent.action, keyEvent.code));
+                                    //audioManager.dispatchMediaKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_NEXT));
+                                }
                             }
                             break;
                     }
@@ -137,7 +143,7 @@ public class MainActivity extends AppCompatActivity {
                             break;
                         case TcpClient.EVENT_ON_CONNECT_FAILED:
                             changeStatus(ConnectionStatus.DISCONNECTED);
-                            if (isForeground) {
+                            if (isForeground.get()) {
                                 try {
                                     Toast.makeText(MainActivity.this, new String(data, StandardCharsets.UTF_8), Toast.LENGTH_SHORT).show();
                                 } catch (Exception ignored) {
@@ -161,14 +167,20 @@ public class MainActivity extends AppCompatActivity {
         Message message = new Message();
         message.name = data.getClass().getSimpleName();
         message.data = gson.toJson(data);
-        client.send(connectionId, gson.toJson(message).getBytes());
+
+        byte[] jsonBytes = gson.toJson(message).getBytes();
+
+        ByteBuffer buffer = ByteBuffer.allocate(4 + jsonBytes.length);
+        buffer.putInt(jsonBytes.length);
+        buffer.put(jsonBytes);
+        client.send(connectionId, buffer.array());
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         // 应用程序回到前台
-        isForeground = true;
+        isForeground.set(true);
         updateUI();
     }
 
@@ -176,7 +188,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onPause() {
         super.onPause();
         // 应用程序进入后台
-        isForeground = false;
+        isForeground.set(false);
     }
 
     public void onButtonClickConnect(View view) {
@@ -206,21 +218,22 @@ public class MainActivity extends AppCompatActivity {
 
         serverIpAddress = ipAddress;
         serverPort = port;
+        token = editTextToken.getText().toString();
 
         changeStatus(ConnectionStatus.CONNECTING);
-        connectionId = client.nextConnectionId();
+        connectionId.set(client.nextConnectionId());
         client.connect(serverIpAddress, serverPort, 5);
     }
 
     public void onButtonClickDisconnect(View view) {
         changeStatus(ConnectionStatus.DISCONNECTING);
-        client.disconnect(connectionId);
+        client.disconnect(connectionId.get());
     }
 
-    public void changeStatus(ConnectionStatus status) {
-        if(curStatus != status) {
-            curStatus = status;
-            if(isForeground) {
+    public void changeStatus(int status) {
+        if(curStatus.get() != status) {
+            curStatus.set(status);
+            if(isForeground.get()) {
                 updateUI();
             }
         }
@@ -228,23 +241,27 @@ public class MainActivity extends AppCompatActivity {
 
     @SuppressLint("SetTextI18n")
     public void updateUI() {
-        switch (curStatus) {
-            case CONNECTING:
+        int status = curStatus.get();
+        editTextServerAddress.setEnabled(status == ConnectionStatus.DISCONNECTED);
+        editTextToken.setEnabled(status == ConnectionStatus.DISCONNECTED);
+
+        switch (status) {
+            case ConnectionStatus.CONNECTING:
                 buttonConnect.setEnabled(false);
                 buttonDisconnect.setEnabled(false);
                 textViewStatus.setText("connecting");
                 break;
-            case CONNECTED:
+            case ConnectionStatus.CONNECTED:
                 buttonConnect.setEnabled(false);
                 buttonDisconnect.setEnabled(true);
                 textViewStatus.setText("connected");
                 break;
-            case DISCONNECTING:
+            case ConnectionStatus.DISCONNECTING:
                 buttonConnect.setEnabled(false);
                 buttonDisconnect.setEnabled(false);
                 textViewStatus.setText("disconnecting");
                 break;
-            case DISCONNECTED:
+            case ConnectionStatus.DISCONNECTED:
                 buttonConnect.setEnabled(true);
                 buttonDisconnect.setEnabled(false);
                 textViewStatus.setText("disconnected");

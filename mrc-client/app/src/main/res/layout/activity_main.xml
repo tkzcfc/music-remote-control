@@ -22,11 +22,21 @@
             android:text="TextView" />
 
         <EditText
+            android:id="@+id/editTextToken"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:layout_marginBottom="16dp"
+            android:ems="10"
+            android:hint="@string/input_hit_token"
+            android:inputType="text" />
+
+        <EditText
             android:id="@+id/editTextServerAddress"
             android:layout_width="match_parent"
             android:layout_height="60dp"
             android:layout_marginBottom="16dp"
             android:ems="10"
+            android:hint="@string/input_hit_server_address"
             android:inputType="text" />
 
         <Button
@@ -42,7 +52,7 @@
             android:layout_height="wrap_content"
             android:onClick="onButtonClickDisconnect"
             android:text="Disconnect" />
-        
+
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

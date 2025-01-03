@@ -47,7 +47,7 @@ void yasio_client::start(int maxChannelCount)
         m_availChannelQueue.push(i);
         m_service->set_option(yasio::YOPT_C_UNPACK_PARAMS, i, 1024 * 1024 * 10, 0, 4, 4);
         m_service->set_option(yasio::YOPT_C_UNPACK_STRIP, i, 4);
-        m_service->set_option(yasio::YOPT_C_UNPACK_NO_BSWAP, i, 1);
+        m_service->set_option(yasio::YOPT_C_UNPACK_NO_BSWAP, i, 0);
 
         if (on_yasio_service_opt_callback)
             on_yasio_service_opt_callback(m_service, i);

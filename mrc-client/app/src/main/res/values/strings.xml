@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">mrc-client</string>
+    <string name="input_hit_server_address">server address</string>
+    <string name="input_hit_token">token</string>
 </resources>
