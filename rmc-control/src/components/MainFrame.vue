@@ -11,7 +11,7 @@ const authorizationCode = ref("");
 
 serverAdress.value = localStorage.getItem("serverAdress") || "";
 clientToken.value = localStorage.getItem("clientToken") || "";
-authorizationCode.value = localStorage.getItem("authorizationCode") || "";
+authorizationCode.value = localStorage.getItem("authorizationCode") || "abc123";
 
 import { toast } from 'vue3-toastify';
 import 'vue3-toastify/dist/index.css';

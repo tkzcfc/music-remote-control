@@ -22,7 +22,7 @@ pub struct Opts {
     pub listen_addr: String,
 
     /// Authorization code
-    #[arg(long, default_value = "google")]
+    #[arg(long, default_value = "abc123")]
     pub authorization_code: String,
 }
 
