@@ -1,6 +1,6 @@
 use crate::net::WriterMessage;
 use crate::proto::{
-    Message, Ping, Pong, PushMediaKeyEvent, SendControlMediaKeyEventRequest,
+    Message, Ping, PushMediaKeyEvent, SendControlMediaKeyEventRequest,
     SendControlMediaKeyEventResponse,
 };
 use crate::{GLOBAL_CONTEXT, GLOBAL_OPTS};
@@ -8,18 +8,17 @@ use byteorder::BigEndian;
 use serde::Serialize;
 use std::time::Duration;
 use tokio::sync::mpsc::UnboundedSender;
-use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
 use tokio::time::sleep;
 
 pub struct Player {
     pub tx: UnboundedSender<WriterMessage>,
-    is_controller: RwLock<bool>,
     ping_task: JoinHandle<()>,
+    session_id: u32,
 }
 
 impl Player {
-    pub fn new(tx: UnboundedSender<WriterMessage>) -> Self {
+    pub fn new(session_id: u32, tx: UnboundedSender<WriterMessage>) -> Self {
         let tx_cloned = tx.clone();
         Self {
             tx,
@@ -29,38 +28,32 @@ impl Player {
                     sleep(Duration::from_secs(5)).await;
                 }
             }),
-            is_controller: RwLock::new(false),
+            session_id,
         }
     }
 
     pub async fn on_recv_message(&self, message: &Message) -> anyhow::Result<()> {
-        let is_controller = *self.is_controller.read().await;
         match message.name.as_str() {
-            "Pong" => {
-                if !is_controller {
-                    let pong: Pong = serde_json::from_str(&message.data)?;
-                    if let Some(authorization_code) = pong.authorization_code {
-                        if GLOBAL_OPTS.authorization_code == authorization_code {
-                            *self.is_controller.write().await = true;
-                        }
-                    }
-                }
-            }
+            "Pong" => {}
             "SendControlMediaKeyEventRequest" => {
-                if is_controller {
-                    let request: SendControlMediaKeyEventRequest =
-                        serde_json::from_str(&message.data)?;
+                let request: SendControlMediaKeyEventRequest = serde_json::from_str(&message.data)?;
 
+                if GLOBAL_OPTS.authorization_code == request.authorization_code {
                     let push = PushMediaKeyEvent {
                         action: request.action,
                         code: request.code,
                         token: request.token,
                     };
 
-                    for (_, (_, player)) in GLOBAL_CONTEXT.players.lock().await.iter().enumerate() {
-                        if !player.is_controller().await {
-                            send_message(&player.tx, &push)?;
-                        }
+                    for (_, (_, player)) in GLOBAL_CONTEXT
+                        .players
+                        .lock()
+                        .await
+                        .iter()
+                        .filter(|(session_id, _)| **session_id != self.session_id)
+                        .enumerate()
+                    {
+                        send_message(&player.tx, &push)?;
                     }
 
                     send_message(
@@ -90,14 +83,14 @@ impl Player {
         self.ping_task.abort();
         Ok(())
     }
-
-    pub async fn is_controller(&self) -> bool {
-        return *self.is_controller.read().await;
-    }
 }
 
 fn type_name_of<T>() -> &'static str {
-    std::any::type_name::<T>()
+    let full_type_name = std::any::type_name::<T>();
+    full_type_name
+        .rsplit("::")
+        .next()
+        .unwrap_or_else(|| full_type_name)
 }
 
 fn now_millis() -> u64 {

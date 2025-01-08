@@ -24,7 +24,7 @@ impl SessionDelegate for Peer {
         _addr: &SocketAddr,
         tx: UnboundedSender<WriterMessage>,
     ) -> anyhow::Result<()> {
-        let player = Arc::new(Player::new(tx));
+        let player = Arc::new(Player::new(session_id, tx));
         GLOBAL_CONTEXT
             .players
             .lock()
@@ -77,18 +77,21 @@ impl SessionDelegate for Peer {
 
     // 收到一个完整的消息包
     async fn on_recv_frame(&mut self, bytes: Vec<u8>) -> anyhow::Result<()> {
-        if bytes.len() < 8 {
-            return Err(anyhow!("message length is too small"));
-        }
-
         let str = String::from_utf8(bytes)?;
+        println!("recv: {}", str);
         let message: Message = serde_json::from_str(&str)?;
 
-        self.player
+        let result = self.player
             .as_ref()
             .unwrap()
             .on_recv_message(&message)
-            .await
+            .await;
+        
+        if let Err(ref err) = result {
+            println!("on_recv_message err: {}", err.to_string());
+        }
+
+        result
     }
 }
 
