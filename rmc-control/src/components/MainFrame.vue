@@ -178,11 +178,11 @@ await listen('rs2js', (event: any) => {
      <form class="row" @submit.prevent="on_click_control('pause')">
        <button type="submit">Pause</button>
      </form>
-     <form class="row" @submit.prevent="on_click_control('next')">
-       <button type="submit">Next</button>
-     </form>
      <form class="row" @submit.prevent="on_click_control('previous')">
        <button type="submit">Previous</button>
+     </form>
+     <form class="row" @submit.prevent="on_click_control('next')">
+       <button type="submit">Next</button>
      </form>
     </div>
   </div>
