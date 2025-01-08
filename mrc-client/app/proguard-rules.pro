@@ -21,3 +21,4 @@
 #-renamesourcefileattribute SourceFile
 
 -keep class com.mrc.client.TcpClient { *; }
+-keep class com.mrc.client.proto** { *; }

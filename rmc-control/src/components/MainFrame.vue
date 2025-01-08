@@ -47,6 +47,7 @@ async function on_click_login() {
 
 async function on_click_control(action: string) {
   const ACTION_DOWN = 0;
+  const ACTION_UP = 1;
 
   const KEYCODE_MEDIA_NEXT = 87;
   const KEYCODE_MEDIA_PREVIOUS = 88;
@@ -89,6 +90,9 @@ async function on_click_control(action: string) {
 
   request.token = clientToken.value;
   request.authorization_code = authorizationCode.value;
+  await send_message_to_rust("SendControlMediaKeyEventRequest", request);
+
+  request.action = ACTION_UP;
   await send_message_to_rust("SendControlMediaKeyEventRequest", request);
 }
 
