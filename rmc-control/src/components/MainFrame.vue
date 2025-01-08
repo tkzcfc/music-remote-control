@@ -92,7 +92,8 @@ async function on_click_control(action: string) {
   await send_message_to_rust("SendControlMediaKeyEventRequest", request);
 }
 
-function save_to_local_storage(key) {
+function save_to_local_storage(key: string) {
+  // @ts-ignore
   localStorage.setItem(key, this[key]);
 }
 
