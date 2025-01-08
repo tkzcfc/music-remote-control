@@ -64,12 +64,12 @@ jobs:
         cd rmc-server
         $CARGO build $CARGO_BUILD_ARG --locked --target ${{ matrix.target }}
 
-    # - name: Set up JDK 17
-    #   if: matrix.target == 'x86_64-pc-windows-msvc'
-    #   uses: actions/setup-java@v3
-    #   with:
-    #     distribution: 'adopt'
-    #     java-version: '17'
+    - name: Set up JDK 17
+      if: matrix.target == 'x86_64-pc-windows-msvc'
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'adopt'
+        java-version: '17'
     
     # - name: Download and setup Android SDK
     #   if: matrix.target == 'x86_64-pc-windows-msvc'
