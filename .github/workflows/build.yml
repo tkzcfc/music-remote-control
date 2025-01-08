@@ -21,8 +21,8 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
             
-          # - os: windows-latest
-          #   target: x86_64-pc-windows-msvc
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
 
     steps:
     - name: Checkout code
@@ -109,18 +109,19 @@ jobs:
       shell: bash
       run: |
         echo "ASSET=" >> $GITHUB_ENV
+        CUR_DIR=$(pwd)
 
         if [ "${{ matrix.os }}" = "windows-latest" ]; then
-          echo "ASSET=\${{ env.ASSET }} ${GITHUB_WORKSPACE}/rmc-server/target/${{ matrix.target }}/release/rmc-server.exe" >> $GITHUB_ENV
-          echo "ASSET=\${{ env.ASSET }} ${GITHUB_WORKSPACE}/rmc-control/src-tauri/target/${{ matrix.target }}/release/bundle/msi/rmc-control_0.0.0_x64_en-US.msi" >> $GITHUB_ENV
-          echo "ASSET=\${{ env.ASSET }} ${GITHUB_WORKSPACE}/rmc-control/src-tauri/target/${{ matrix.target }}/release/bundle/nsis/rmc-control_0.0.0_x64-setup.exe" >> $GITHUB_ENV
-          echo "ASSET=\${{ env.ASSET }} ${GITHUB_WORKSPACE}/rmc-control/src-tauri/target/${{ matrix.target }}/release/rmc-control.exe" >> $GITHUB_ENV
+          echo "ASSET=\${{ env.ASSET }} ${CUR_DIR}/rmc-server/target/${{ matrix.target }}/release/rmc-server.exe" >> $GITHUB_ENV
+          echo "ASSET=\${{ env.ASSET }} ${CUR_DIR}/rmc-control/src-tauri/target/${{ matrix.target }}/release/bundle/msi/rmc-control_0.0.0_x64_en-US.msi" >> $GITHUB_ENV
+          echo "ASSET=\${{ env.ASSET }} ${CUR_DIR}/rmc-control/src-tauri/target/${{ matrix.target }}/release/bundle/nsis/rmc-control_0.0.0_x64-setup.exe" >> $GITHUB_ENV
+          echo "ASSET=\${{ env.ASSET }} ${CUR_DIR}/rmc-control/src-tauri/target/${{ matrix.target }}/release/rmc-control.exe" >> $GITHUB_ENV
 
-          cp ${GITHUB_WORKSPACE}/mrc-client/app/build/outputs/apk/release/app-release.apk ${GITHUB_WORKSPACE}/mrc-client/app/build/outputs/apk/release/rmc-client.apk
-          echo "ASSET=\${{ env.ASSET }} ${GITHUB_WORKSPACE}/mrc-client/app/build/outputs/apk/release/rmc-client.apk" >> $GITHUB_ENV
+          cp ${CUR_DIR}/mrc-client/app/build/outputs/apk/release/app-release.apk ${CUR_DIR}/mrc-client/app/build/outputs/apk/release/rmc-client.apk
+          echo "ASSET=\${{ env.ASSET }} ${CUR_DIR}/mrc-client/app/build/outputs/apk/release/rmc-client.apk" >> $GITHUB_ENV
           
         else
-          echo "ASSET=\${{ env.ASSET }} ${GITHUB_WORKSPACE}/rmc-server/target/${{ matrix.target }}/release/rmc-server" >> $GITHUB_ENV
+          echo "ASSET=\${{ env.ASSET }} ${CUR_DIR}/rmc-server/target/${{ matrix.target }}/release/rmc-server" >> $GITHUB_ENV
         fi
 
     - name: Upload binaries to release
