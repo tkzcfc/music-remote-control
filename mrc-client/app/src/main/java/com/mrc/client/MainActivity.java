@@ -84,8 +84,6 @@ public class MainActivity extends AppCompatActivity {
         buttonConnect = findViewById(R.id.buttonConnect);
         buttonDisconnect = findViewById(R.id.buttonDisconnect);
 
-        loadtext();
-
         client.setMessageReceivedListener((event_type, connection_id, data) -> {
             if (connectionId.get() != connection_id){
                 return;
@@ -164,6 +162,7 @@ public class MainActivity extends AppCompatActivity {
         });
         client.start(3);
 
+        loadText();
         updateUI();
     }
 
@@ -286,7 +285,7 @@ public class MainActivity extends AppCompatActivity {
         editor.apply();
     }
 
-    private void loadtext() {
+    private void loadText() {
         SharedPreferences sharedPreferences = getSharedPreferences("MyPrefs", MODE_PRIVATE);
         String serverAddress = sharedPreferences.getString("input_serverAddress", "");
         String token = sharedPreferences.getString("input_token", "");
