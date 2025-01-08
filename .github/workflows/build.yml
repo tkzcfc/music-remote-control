@@ -1,0 +1,124 @@
+name: build
+
+on:
+  push:
+    # Sequence of patterns matched against refs/tags
+    tags:
+      - "v*" # Push events to matching v*, i.e. v1.0, v20.15.10
+
+  workflow_dispatch:
+
+# env:
+#   CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
+
+    - name: Set the version
+      shell: bash
+      if: env.BIN_VERSION == ''
+      run: |
+        echo "BIN_VERSION=$GITHUB_REF_NAME" >> $GITHUB_ENV
+        echo "version is: ${{ env.BIN_VERSION }}"
+
+    - name: Install dependencies
+      if: matrix.target == 'x86_64-unknown-linux-musl'
+      run: sudo apt update && sudo apt install musl-tools -y
+      
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        # stable: 使用稳定版本的Rust。
+        # beta: 使用测试版本的Rust。
+        # nightly: 使用最新的夜间版本的Rust。
+        # 具体版本号: 如1.56.0，指定特定的Rust版本。
+        toolchain: 1.80.0
+        target: ${{ matrix.target }}
+
+    - name: Setup native compilation
+      shell: bash
+      run: |
+        echo "CARGO=cargo" >> $GITHUB_ENV
+        echo "CARGO_BUILD_ARG=--release" >> $GITHUB_ENV
+
+    - name: Build width linux-musl
+      if: matrix.target == 'x86_64-unknown-linux-musl'
+      shell: bash
+      run: |
+        cd rmc-server
+        $CARGO build $CARGO_BUILD_ARG --locked --target ${{ matrix.target }}
+
+    - name: Set up JDK 11
+      if: matrix.target == 'x86_64-pc-windows-msvc'
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'adopt'
+        java-version: '11'
+    
+    - name: Download and setup Android SDK
+      if: matrix.target == 'x86_64-pc-windows-msvc'
+      uses: android-actions/setup-android@v2
+      with:
+        sdk-version: '30.0.3'
+
+    - name: Build with windows
+      if: matrix.target == 'x86_64-pc-windows-msvc'
+      shell: bash
+      env:
+        RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+        RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+        RELEASE_KEYSTORE_FILE: signing-key.jks
+      run: |
+        cd rmc-server
+        $CARGO build $CARGO_BUILD_ARG --locked --target ${{ matrix.target }}
+        cd ../
+        cd rmc-control
+        npm install
+        npm run tauri build
+        cd ../
+        cd mrc-client
+        echo ${{ secrets.SIGNING_KEY }} | base64 -d > ${{ RELEASE_KEYSTORE_FILE }}
+        gradlew assembleRelease
+        cd ../
+        
+    - name: Setup archive
+      shell: bash
+      run: |
+        cd ../
+        echo "ASSET=" >> $GITHUB_ENV
+
+        if [ "${{ matrix.os }}" = "windows-latest" ]; then
+          echo "ASSET=\${{ env.ASSET }} rmc-server/target/${{ matrix.target }}/release/rmc-server.exe" >> $GITHUB_ENV
+          echo "ASSET=\${{ env.ASSET }} rmc-control/src-tauri/target/${{ matrix.target }}/release/bundle/msi/rmc-control_0.0.0_x64_en-US.msi" >> $GITHUB_ENV
+          echo "ASSET=\${{ env.ASSET }} rmc-control/src-tauri/target/${{ matrix.target }}/release/bundle/nsis/rmc-control_0.0.0_x64-setup.exe" >> $GITHUB_ENV
+          echo "ASSET=\${{ env.ASSET }} rmc-control/src-tauri/target/${{ matrix.target }}/release/rmc-control.exe" >> $GITHUB_ENV
+
+          cp mrc-client/app/build/outputs/apk/release/app-release.apk mrc-client/app/build/outputs/apk/release/rmc-client.apk
+          echo "ASSET=\${{ env.ASSET }} mrc-client/app/build/outputs/apk/release/rmc-client.apk" >> $GITHUB_ENV
+          
+        else
+          echo "ASSET=\${{ env.ASSET }} rmc-server/target/${{ matrix.target }}/release/rmc-server" >> $GITHUB_ENV
+        fi
+
+    - name: Upload binaries to release
+      uses: softprops/action-gh-release@v2
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        files: ${{ env.ASSET }}
