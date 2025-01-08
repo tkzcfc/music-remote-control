@@ -2,7 +2,7 @@
   "build": {
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build",
-    "devPath": "http://localhost:1420",
+    "devPath": "http://localhost:12210",
     "distDir": "../dist"
   },
   "package": {
@@ -37,8 +37,8 @@
         "fullscreen": false,
         "resizable": true,
         "title": "rmc-control",
-        "width": 800,
-        "height": 600
+        "width": 600,
+        "height": 300
       }
     ]
   }
