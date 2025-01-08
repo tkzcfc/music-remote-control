@@ -25,6 +25,15 @@ android {
 //        }
     }
 
+    signingConfigs {
+        release {
+            keyAlias System.getenv("RELEASE_KEY_ALIAS") ?: project.properties['RELEASE_KEY_ALIAS']
+            keyPassword System.getenv("RELEASE_KEY_PASSWORD") ?: project.properties['RELEASE_KEY_PASSWORD']
+            storeFile file(System.getenv("RELEASE_KEYSTORE_FILE") ?: project.properties['RELEASE_KEYSTORE_FILE'])
+            storePassword System.getenv("RELEASE_KEYSTORE_PASSWORD") ?: project.properties['RELEASE_KEYSTORE_PASSWORD']
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled true
