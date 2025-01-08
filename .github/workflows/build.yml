@@ -71,11 +71,11 @@ jobs:
         distribution: 'adopt'
         java-version: '11'
     
-    # - name: Download and setup Android SDK
-    #   if: matrix.target == 'x86_64-pc-windows-msvc'
-    #   uses: android-actions/setup-android@v2
-    #   with:
-    #     sdk-version: '30.0.3'
+    - name: Download and setup Android SDK
+      if: matrix.target == 'x86_64-pc-windows-msvc'
+      uses: android-actions/setup-android@v2
+      with:
+        sdk-version: '30.0.3'
 
     - name: Setup Node.js environment
       if: matrix.target == 'x86_64-pc-windows-msvc'
