@@ -1,39 +1,59 @@
 use crate::net::WriterMessage;
 use crate::proto::{
-    Message, Ping, PushMediaKeyEvent, SendControlMediaKeyEventRequest,
+    Message, Ping, Pong, PushMediaKeyEvent, SendControlMediaKeyEventRequest,
     SendControlMediaKeyEventResponse,
 };
 use crate::{GLOBAL_CONTEXT, GLOBAL_OPTS};
 use byteorder::BigEndian;
 use serde::Serialize;
+use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::mpsc::UnboundedSender;
+use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
-use tokio::time::sleep;
+use tokio::time::{sleep, Instant};
 
 pub struct Player {
     pub tx: UnboundedSender<WriterMessage>,
     ping_task: JoinHandle<()>,
     session_id: u32,
+    last_active_time: Arc<RwLock<Instant>>,
 }
 
 impl Player {
     pub fn new(session_id: u32, tx: UnboundedSender<WriterMessage>) -> Self {
+        let last_active_time = Arc::new(RwLock::new(Instant::now()));
+
         let tx_cloned = tx.clone();
+        let last_active_time_cloned = last_active_time.clone();
+
         Self {
             tx,
             ping_task: tokio::spawn(async move {
                 loop {
+                    sleep(Duration::from_secs(2)).await;
+                    if last_active_time_cloned.read().await.elapsed() < Duration::from_secs(10) {
+                        continue;
+                    }
                     let _ = send_message(&tx_cloned, &Ping { time: now_millis() });
-                    sleep(Duration::from_secs(5)).await;
                 }
             }),
             session_id,
+            last_active_time,
         }
     }
 
     pub async fn on_recv_message(&self, message: &Message) -> anyhow::Result<()> {
+        if self.last_active_time.read().await.elapsed() >= Duration::from_secs(1) {
+            let mut instant_write = self.last_active_time.write().await;
+            *instant_write = Instant::now();
+        }
+
         match message.name.as_str() {
+            "Ping" => {
+                let ping: Ping = serde_json::from_str(&message.data)?;
+                send_message(&self.tx, &Pong { time: ping.time })?;
+            }
             "Pong" => {}
             "SendControlMediaKeyEventRequest" => {
                 let request: SendControlMediaKeyEventRequest = serde_json::from_str(&message.data)?;

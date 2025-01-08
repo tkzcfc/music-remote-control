@@ -81,12 +81,13 @@ impl SessionDelegate for Peer {
         println!("recv: {}", str);
         let message: Message = serde_json::from_str(&str)?;
 
-        let result = self.player
+        let result = self
+            .player
             .as_ref()
             .unwrap()
             .on_recv_message(&message)
             .await;
-        
+
         if let Err(ref err) = result {
             println!("on_recv_message err: {}", err.to_string());
         }

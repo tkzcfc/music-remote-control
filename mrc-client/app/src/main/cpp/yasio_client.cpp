@@ -38,7 +38,7 @@ void yasio_client::start(int maxChannelCount)
     m_service->set_option(yasio::YOPT_S_CONNECT_TIMEOUT, 5);
     m_service->set_option(yasio::YOPT_S_DNS_QUERIES_TIMEOUT, 3);
     m_service->set_option(yasio::YOPT_S_DNS_QUERIES_TRIES, 1);
-    m_service->set_option(yasio::YOPT_S_FORWARD_PACKET, 1);
+    m_service->set_option(yasio::YOPT_S_FORWARD_PACKET, 0);
     m_service->set_option(yasio::YOPT_S_NO_NEW_THREAD, 1);
     //m_service->set_option(yasio::YOPT_S_TCP_KEEPALIVE, 5, 5, 3);
 

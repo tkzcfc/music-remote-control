@@ -295,7 +295,7 @@ where
     S: AsyncRead + AsyncWrite + Send + 'static,
 {
     const PING_INTERVAL: Duration = Duration::from_secs(5);
-    const PING_TIMEOUT: Duration = Duration::from_secs(5);
+    const PING_TIMEOUT: Duration = Duration::from_secs(15);
     loop {
         sleep(Duration::from_secs(1)).await;
 

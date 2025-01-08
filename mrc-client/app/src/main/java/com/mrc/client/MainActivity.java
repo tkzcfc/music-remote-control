@@ -2,6 +2,7 @@ package com.mrc.client;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.media.AudioManager;
 import android.os.Bundle;
 import android.util.Log;
@@ -29,6 +30,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+
 
 class ConnectionStatus {
     public final static int CONNECTING = 0;
@@ -82,6 +84,8 @@ public class MainActivity extends AppCompatActivity {
         buttonConnect = findViewById(R.id.buttonConnect);
         buttonDisconnect = findViewById(R.id.buttonDisconnect);
 
+        loadtext();
+
         client.setMessageReceivedListener((event_type, connection_id, data) -> {
             if (connectionId.get() != connection_id){
                 return;
@@ -105,6 +109,7 @@ public class MainActivity extends AppCompatActivity {
             if (event_type == TcpClient.EVENT_ON_RECV_DATA) {
                 try {
                     String msg = new String(data, StandardCharsets.UTF_8);
+                    Log.i(TAG, "recv:" + msg);
                     Gson gson = new Gson();
                     Message message =  gson.fromJson(msg, Message.class);
 
@@ -220,6 +225,7 @@ public class MainActivity extends AppCompatActivity {
         serverPort = port;
         token = editTextToken.getText().toString();
 
+        saveText();
         changeStatus(ConnectionStatus.CONNECTING);
         connectionId.set(client.nextConnectionId());
         client.connect(serverIpAddress, serverPort, 5);
@@ -267,5 +273,24 @@ public class MainActivity extends AppCompatActivity {
                 textViewStatus.setText("disconnected");
                 break;
         }
+    }
+
+    private void saveText() {
+        String serverAddress = editTextServerAddress.getText().toString().trim();
+        String token = editTextToken.getText().toString();
+
+        SharedPreferences sharedPreferences = getSharedPreferences("MyPrefs", MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putString("input_serverAddress", serverAddress);
+        editor.putString("input_token", token);
+        editor.apply();
+    }
+
+    private void loadtext() {
+        SharedPreferences sharedPreferences = getSharedPreferences("MyPrefs", MODE_PRIVATE);
+        String serverAddress = sharedPreferences.getString("input_serverAddress", "");
+        String token = sharedPreferences.getString("input_token", "");
+        editTextServerAddress.setText(serverAddress);
+        editTextToken.setText(token);
     }
 }
