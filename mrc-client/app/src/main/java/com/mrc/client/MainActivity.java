@@ -2,8 +2,11 @@ package com.mrc.client;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.media.AudioManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
@@ -12,9 +15,14 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 
 import androidx.activity.EdgeToEdge;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -27,7 +35,7 @@ import com.mrc.client.proto.PushMediaKeyEvent;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.Objects;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -40,11 +48,15 @@ class ConnectionStatus {
 }
 
 public class MainActivity extends AppCompatActivity {
+    public static String id1 = "test_channel_01";
     public final static String TAG = "MainActivity";
     // Used to load the 'client' library on application startup.
     static {
         System.loadLibrary("client");
     }
+
+    ActivityResultLauncher<String[]> rpl;
+    private final String[] REQUIRED_PERMISSIONS = new String[]{"android.permission.POST_NOTIFICATIONS"};
 
     TcpClient client = new TcpClient();
 
@@ -84,6 +96,14 @@ public class MainActivity extends AppCompatActivity {
         buttonConnect = findViewById(R.id.buttonConnect);
         buttonDisconnect = findViewById(R.id.buttonDisconnect);
 
+        initClient();
+        initService();
+
+        loadText();
+        updateUI();
+    }
+
+    private void initClient() {
         client.setMessageReceivedListener((event_type, connection_id, data) -> {
             if (connectionId.get() != connection_id){
                 return;
@@ -161,9 +181,27 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         client.start(3);
+    }
 
-        loadText();
-        updateUI();
+    private void initService() {
+        rpl = registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), isGranted -> {
+            boolean granted = true;
+            for (Map.Entry<String, Boolean> x : isGranted.entrySet()) {
+                Log.i(TAG,x.getKey() + " is " + x.getValue());
+                if (!x.getValue()) granted = false;
+            }
+            if (granted) Log.i(TAG,"Permissions granted for api 33+");
+        });
+        createchannel();  //needed for the persistent notification created in service.
+        //for the new api 33+ notifications permissions.
+        if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (!allPermissionsGranted()) {
+                rpl.launch(REQUIRED_PERMISSIONS);
+            }
+        }
+
+        Intent number5 = new Intent(getBaseContext(), ControlService.class);
+        startForegroundService(number5);
     }
 
     static void sendMessage(TcpClient client, int connectionId, Object data) {
@@ -291,5 +329,31 @@ public class MainActivity extends AppCompatActivity {
         String token = sharedPreferences.getString("input_token", "");
         editTextServerAddress.setText(serverAddress);
         editTextToken.setText(token);
+    }
+
+    /**
+     * for API 26+ create notification channels
+     */
+    private void createchannel() {
+        NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        NotificationChannel mChannel = new NotificationChannel(id1, getString(R.string.channel_name),  //name of the channel
+                NotificationManager.IMPORTANCE_LOW);   //importance level
+        //important level: default is is high on the phone.  high is urgent on the phone.  low is medium, so none is low?
+        // Configure the notification channel.
+        mChannel.setDescription(getString(R.string.channel_description));
+        mChannel.enableLights(true);
+        // Sets the notification light color for notifications posted to this channel, if the device supports this feature.
+        mChannel.setShowBadge(true);
+        nm.createNotificationChannel(mChannel);
+    }
+
+    //ask for permissions when we start.
+    private boolean allPermissionsGranted() {
+        for (String permission : REQUIRED_PERMISSIONS) {
+            if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
+                return false;
+            }
+        }
+        return true;
     }
 }
