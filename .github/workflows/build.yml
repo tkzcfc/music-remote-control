@@ -18,8 +18,8 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-musl
+          # - os: ubuntu-latest
+          #   target: x86_64-unknown-linux-musl
             
           - os: windows-latest
             target: x86_64-pc-windows-msvc
@@ -87,28 +87,27 @@ jobs:
       if: matrix.target == 'x86_64-pc-windows-msvc'
       shell: bash
       run: |
-        cd rmc-server
-        $CARGO build $CARGO_BUILD_ARG --locked --target ${{ matrix.target }}
-        cd ../
-        cd rmc-control
-        npm install
-        npm run tauri build
-        cd ../
         cd mrc-client
-        
         RELEASE_KEY_ALIAS=${{ secrets.RELEASE_KEY_ALIAS }}
         RELEASE_KEY_PASSWORD=${{ secrets.RELEASE_KEY_PASSWORD }}
         RELEASE_KEYSTORE_PASSWORD=${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
         RELEASE_KEYSTORE_FILE=signing-key.jks
         echo ${{ secrets.SIGNING_KEY }} | base64 -d > $RELEASE_KEYSTORE_FILE
         gradlew assembleRelease
+        cd ../
 
+        cd rmc-control
+        npm install
+        npm run tauri build
+        cd ../
+
+        cd rmc-server
+        $CARGO build $CARGO_BUILD_ARG --locked --target ${{ matrix.target }}
         cd ../
         
     - name: Setup archive
       shell: bash
       run: |
-        cd ../
         echo "ASSET=" >> $GITHUB_ENV
 
         if [ "${{ matrix.os }}" = "windows-latest" ]; then
