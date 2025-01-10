@@ -54,9 +54,6 @@ public class MainActivity extends AppCompatActivity {
         System.loadLibrary("client");
     }
 
-    ActivityResultLauncher<String[]> rpl;
-    private final String[] REQUIRED_PERMISSIONS = new String[]{"android.permission.POST_NOTIFICATIONS"};
-
     TcpClient client = new TcpClient();
 
     TextView textViewStatus;
@@ -69,6 +66,9 @@ public class MainActivity extends AppCompatActivity {
     AtomicBoolean isForeground = new AtomicBoolean(true);
     // 连接id
     AtomicInteger connectionId = new AtomicInteger(-1);
+
+    // 是否开启vpn服务
+    AtomicBoolean isStartFakeVpn = new AtomicBoolean(false);
 
     // 服务器地址
     String serverIpAddress;
@@ -96,7 +96,6 @@ public class MainActivity extends AppCompatActivity {
         buttonDisconnect = findViewById(R.id.buttonDisconnect);
 
         initClient();
-        initService();
 
         loadText();
         updateUI();
@@ -162,6 +161,7 @@ public class MainActivity extends AppCompatActivity {
                     switch (event_type) {
                         case TcpClient.EVENT_ON_CONNECT_SUCCESS:
                             changeStatus(ConnectionStatus.CONNECTED);
+                            startFakeVpnService();
                             break;
                         case TcpClient.EVENT_ON_CONNECT_FAILED:
                             changeStatus(ConnectionStatus.DISCONNECTED);
@@ -182,24 +182,43 @@ public class MainActivity extends AppCompatActivity {
         client.start(3);
     }
 
-    private void initService() {
-        rpl = registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), isGranted -> {
-            boolean granted = true;
-            for (Map.Entry<String, Boolean> x : isGranted.entrySet()) {
-                Log.i(TAG,x.getKey() + " is " + x.getValue());
-                if (!x.getValue()) granted = false;
-            }
-            if (granted) Log.i(TAG,"Permissions granted for api 33+");
-        });
+    protected void startFakeVpnService() {
+        if(!isStartFakeVpn.get()) {
+            isStartFakeVpn.set(true);
 
-        //for the new api 33+ notifications permissions.
-        if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (!allPermissionsGranted()) {
-                rpl.launch(REQUIRED_PERMISSIONS);
-            }
+            runOnUiThread(()-> {
+                createNotificationChannel();
+
+                // 检查当前程序是否已经被用户授权过Vpn 权限
+                Intent intent = FakeVpnService.prepare(this);
+                if (intent != null) {
+                    startActivityForResult(intent, 0);
+                } else {
+                    onActivityResult(0, RESULT_OK, null);
+                }
+            });
         }
+    }
 
-        startForegroundService(new Intent(getBaseContext(), ControlService.class));
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (resultCode == RESULT_OK) {
+            Intent intent = new Intent(this, FakeVpnService.class);
+            startService(intent);
+        }
+    }
+
+    private void createNotificationChannel() {
+        NotificationChannel channel = new NotificationChannel(
+                "vpn_channel",
+                "VPN Service Channel",
+                NotificationManager.IMPORTANCE_HIGH
+        );
+        NotificationManager manager = getSystemService(NotificationManager.class);
+        if (manager != null) {
+            manager.createNotificationChannel(channel);
+        }
     }
 
     static void sendMessage(TcpClient client, int connectionId, Object data) {
@@ -327,15 +346,5 @@ public class MainActivity extends AppCompatActivity {
         String token = sharedPreferences.getString("input_token", "");
         editTextServerAddress.setText(serverAddress);
         editTextToken.setText(token);
-    }
-
-    //ask for permissions when we start.
-    private boolean allPermissionsGranted() {
-        for (String permission : REQUIRED_PERMISSIONS) {
-            if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
-                return false;
-            }
-        }
-        return true;
     }
 }
