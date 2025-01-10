@@ -118,9 +118,9 @@ jobs:
       with:
         files: |
           rmc-server/target/${{ matrix.target }}/release/rmc-server.exe
-          rmc-control/src-tauri/target/${{ matrix.target }}/release/bundle/msi/rmc-control_0.0.0_x64_en-US.msi
-          rmc-control/src-tauri/target/${{ matrix.target }}/release/bundle/nsis/rmc-control_0.0.0_x64-setup.exe
-          rmc-control/src-tauri/target/${{ matrix.target }}/release/rmc-control.exe
+          rmc-control/src-tauri/target/release/bundle/msi/rmc-control_0.0.0_x64_en-US.msi
+          rmc-control/src-tauri/target/release/bundle/nsis/rmc-control_0.0.0_x64-setup.exe
+          rmc-control/src-tauri/target/release/rmc-control.exe
           mrc-client/app/build/outputs/apk/release/rmc-client.apk
     
     - name: Upload binaries to release for other platforms
