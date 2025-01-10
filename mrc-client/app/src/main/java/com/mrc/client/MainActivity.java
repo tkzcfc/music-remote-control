@@ -48,7 +48,6 @@ class ConnectionStatus {
 }
 
 public class MainActivity extends AppCompatActivity {
-    public static String id1 = "test_channel_01";
     public final static String TAG = "MainActivity";
     // Used to load the 'client' library on application startup.
     static {
@@ -192,7 +191,7 @@ public class MainActivity extends AppCompatActivity {
             }
             if (granted) Log.i(TAG,"Permissions granted for api 33+");
         });
-        createchannel();  //needed for the persistent notification created in service.
+
         //for the new api 33+ notifications permissions.
         if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (!allPermissionsGranted()) {
@@ -200,8 +199,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        Intent number5 = new Intent(getBaseContext(), ControlService.class);
-        startForegroundService(number5);
+        startForegroundService(new Intent(getBaseContext(), ControlService.class));
     }
 
     static void sendMessage(TcpClient client, int connectionId, Object data) {
@@ -329,22 +327,6 @@ public class MainActivity extends AppCompatActivity {
         String token = sharedPreferences.getString("input_token", "");
         editTextServerAddress.setText(serverAddress);
         editTextToken.setText(token);
-    }
-
-    /**
-     * for API 26+ create notification channels
-     */
-    private void createchannel() {
-        NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        NotificationChannel mChannel = new NotificationChannel(id1, getString(R.string.channel_name),  //name of the channel
-                NotificationManager.IMPORTANCE_LOW);   //importance level
-        //important level: default is is high on the phone.  high is urgent on the phone.  low is medium, so none is low?
-        // Configure the notification channel.
-        mChannel.setDescription(getString(R.string.channel_description));
-        mChannel.enableLights(true);
-        // Sets the notification light color for notifications posted to this channel, if the device supports this feature.
-        mChannel.setShowBadge(true);
-        nm.createNotificationChannel(mChannel);
     }
 
     //ask for permissions when we start.

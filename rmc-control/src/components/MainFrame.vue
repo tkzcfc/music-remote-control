@@ -116,6 +116,7 @@ await listen('rs2js', (event: any) => {
         // toastId: "tag_connect_result",
         position: toast.POSITION.BOTTOM_CENTER,
         type: "success",
+        pauseOnFocusLoss: false,
       });
     }
     else {
@@ -126,6 +127,7 @@ await listen('rs2js', (event: any) => {
         // toastId: "tag_connect_result",
         position: toast.POSITION.BOTTOM_CENTER,
         type: "error",
+        pauseOnFocusLoss: false,
       });
     }
   }
@@ -143,6 +145,7 @@ await listen('rs2js', (event: any) => {
         // toastId: "tag_disconnect_ntf",
         position: toast.POSITION.BOTTOM_CENTER,
         type: "warning",
+        pauseOnFocusLoss: false,
       });
     }
     else if(name == "SendControlMediaKeyEventResponse") {
@@ -150,12 +153,14 @@ await listen('rs2js', (event: any) => {
         toast(`Successfully  sent`, {
           position: toast.POSITION.BOTTOM_CENTER,
           type: "info",
+          pauseOnFocusLoss: false,
         });
       }
       else {
         toast(`Sending failed, error: ${message.error}`, {
           position: toast.POSITION.BOTTOM_CENTER,
           type: "error",
+          pauseOnFocusLoss: false,
         });
       }
     }
