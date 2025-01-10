@@ -3,6 +3,7 @@ package com.mrc.client;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -33,12 +34,16 @@ public class ControlService extends Service {
 
     // build a persistent notification and return it.
     public Notification createNotification(String message) {
+        Intent notificationIntent = new Intent(this, MainActivity.class);
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
         return new NotificationCompat.Builder(getApplicationContext(), notificationId)
                 .setSmallIcon(R.mipmap.ic_launcher)
                 .setOngoing(true)  //persistent notification!
                 .setChannelId(notificationId)
                 .setContentTitle("rmc-client")   //Title message top row.
                 .setContentText(message)  //message when looking at the notification, second row
+                .setContentIntent(pendingIntent)
                 .build();  //finally build and return a Notification.
     }
 }
